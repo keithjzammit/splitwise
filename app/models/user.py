@@ -14,5 +14,11 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    expenses = relationship("Expense", back_populates="user")
+    expenses = relationship("Expense", foreign_keys="Expense.payer_id", back_populates="payer")
     groups = relationship("Group", secondary="user_groups", back_populates="users")
+
+    def __repr__(self):
+        return f"User(id={self.id}, email={self.email}, full_name={self.full_name})"
+
+    class Config:
+        from_attributes = True

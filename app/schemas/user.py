@@ -14,3 +14,9 @@ class User(UserBase):
 
     class Config:
         from_attributes = True
+
+class UserInDB(User):
+    hashed_password: str
+
+    class Config:
+        from_attributes = True

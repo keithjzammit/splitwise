@@ -49,21 +49,32 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register")
-async def register(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = get_user(db, user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    hashed_password = get_password_hash(user.password)
-    db_user = User(
-        email=user.email,
-        hashed_password=hashed_password,
-        full_name=user.full_name
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    try:
+        # Check if user already exists
+        existing_user = get_user(db, user_in.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+        
+        # Create new user
+        user_dict = user_in.dict()
+        user_dict["hashed_password"] = get_password_hash(user_in.password)
+        user_dict.pop("password")
+        
+        user = User(**user_dict)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        return {"id": user.id, "email": user.email, "full_name": user.full_name}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Button, Container, Grid, TextField, Typography, Paper } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Box, Button, Container, Grid, TextField, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { selectToken } from '../features/userSlice';
 
 const Expenses = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const token = useSelector(selectToken);
   const [expenses, setExpenses] = useState([]);
   const [newExpense, setNewExpense] = useState({
     description: '',
@@ -13,30 +17,35 @@ const Expenses = () => {
     group_id: '',
     splits: []
   });
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
     fetchExpenses();
-  }, []);
+  }, [token, navigate]);
 
   const fetchExpenses = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/expenses/', {
+      const response = await axios.get('http://localhost:8001/api/v1/expenses/', {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         }
       });
       setExpenses(response.data);
     } catch (error) {
-      console.error('Error fetching expenses:', error);
+      setError(error.response?.data?.detail || 'Failed to fetch expenses');
     }
   };
 
   const handleCreateExpense = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8000/api/v1/expenses/', newExpense, {
+      await axios.post('http://localhost:8001/api/v1/expenses/', newExpense, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         }
       });
       setNewExpense({
@@ -48,12 +57,17 @@ const Expenses = () => {
       });
       fetchExpenses();
     } catch (error) {
-      console.error('Error creating expense:', error);
+      setError(error.response?.data?.detail || 'Failed to create expense');
     }
   };
 
   return (
     <Container>
+      {error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error}
+        </Typography>
+      )}
       <Typography variant="h4" component="h1" gutterBottom>
         Expenses
       </Typography>
@@ -90,7 +104,6 @@ const Expenses = () => {
                 onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
               />
             </Grid>
-            {/* Add more fields for payer_id, group_id, and splits as needed */}
             <Grid item xs={12}>
               <Button
                 type="submit"
@@ -104,23 +117,34 @@ const Expenses = () => {
         </form>
       </Paper>
 
-      <Grid container spacing={3}>
-        {expenses.map((expense) => (
-          <Grid item xs={12} md={6} lg={4} key={expense.id}>
-            <Paper elevation={2} sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                {expense.description}
-              </Typography>
-              <Typography variant="body1">
-                Amount: ${expense.amount}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Added by: User {expense.payer_id}
-              </Typography>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Description</TableCell>
+              <TableCell align="right">Amount</TableCell>
+              <TableCell align="right">Payer</TableCell>
+              <TableCell align="right">Group</TableCell>
+              <TableCell align="right">Splits</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {expenses.map((expense) => (
+              <TableRow key={expense.id}>
+                <TableCell component="th" scope="row">
+                  {expense.description}
+                </TableCell>
+                <TableCell align="right">${expense.amount}</TableCell>
+                <TableCell align="right">{expense.payer?.email}</TableCell>
+                <TableCell align="right">{expense.group?.name}</TableCell>
+                <TableCell align="right">
+                  {expense.splits?.length || 0}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Container>
   );
 };

@@ -1,52 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Button, Card, CardContent, Container, Grid, Typography, TextField } from '@mui/material';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { selectToken } from '../features/userSlice';
 
 const Groups = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const token = useSelector(selectToken);
   const [groups, setGroups] = useState([]);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
     fetchGroups();
-  }, []);
+  }, [token, navigate]);
 
   const fetchGroups = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/groups/', {
+      const response = await axios.get('http://localhost:8001/api/v1/groups/', {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         }
       });
       setGroups(response.data);
     } catch (error) {
-      console.error('Error fetching groups:', error);
+      setError(error.response?.data?.detail || 'Failed to fetch groups');
     }
   };
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8000/api/v1/groups/', {
+      await axios.post('http://localhost:8001/api/v1/groups/', {
         name: newGroupName,
         description: newGroupDescription
       }, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         }
       });
       setNewGroupName('');
       setNewGroupDescription('');
       fetchGroups();
     } catch (error) {
-      console.error('Error creating group:', error);
+      setError(error.response?.data?.detail || 'Failed to create group');
     }
   };
 
   return (
     <Container>
+      {error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error}
+        </Typography>
+      )}
       <Typography variant="h4" component="h1" gutterBottom>
         Your Groups
       </Typography>
@@ -100,7 +114,7 @@ const Groups = () => {
                 <Typography variant="h6" component="h2">
                   {group.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography color="text.secondary" paragraph>
                   {group.description}
                 </Typography>
               </CardContent>

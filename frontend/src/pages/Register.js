@@ -1,36 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
 import { Box, Button, TextField, Typography, Container, Paper } from '@mui/material';
 import axios from 'axios';
-import { login } from '../features/userSlice';
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/auth/token', {
-        username: email,
+      const response = await axios.post('http://localhost:8001/api/v1/auth/register', {
+        email: email,
         password: password,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        full_name: fullName
       });
-      
-      dispatch(login({
-        user: { email },
-        token: response.data.access_token
-      }));
-      navigate('/groups');
-    } catch (error) {
-      setError(error.response?.data?.detail || 'Login failed');
+      navigate('/login');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Registration failed');
     }
   };
 
@@ -38,7 +28,7 @@ const Login = () => {
     <Container component="main" maxWidth="xs">
       <Paper elevation={3} sx={{ p: 4, mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography component="h1" variant="h5">
-          Sign in
+          Register
         </Typography>
         {error && (
           <Typography color="error" sx={{ mt: 2 }}>
@@ -50,11 +40,22 @@ const Login = () => {
             margin="normal"
             required
             fullWidth
+            id="fullName"
+            label="Full Name"
+            name="fullName"
+            autoComplete="name"
+            autoFocus
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
             id="email"
             label="Email Address"
             name="email"
             autoComplete="email"
-            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -66,7 +67,7 @@ const Login = () => {
             label="Password"
             type="password"
             id="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -76,15 +77,15 @@ const Login = () => {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            Sign In
+            Register
           </Button>
           <Button
             fullWidth
             variant="text"
-            onClick={() => navigate('/register')}
+            onClick={() => navigate('/login')}
             sx={{ mt: 2 }}
           >
-            Don't have an account? Register
+            Already have an account? Login
           </Button>
         </Box>
       </Paper>
@@ -92,4 +93,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
